@@ -1,0 +1,16 @@
+[theme]
+# Força o tema base como ESCURO, resolvendo a quebra visual inicial.
+base="dark" 
+
+# Opcional, mas GARANTE que as cores nativas do Streamlit se alinhem 
+# com o seu CSS customizado antes mesmo do Python rodar:
+primaryColor = "#753BBD" 
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#53565A"
+textColor = "#FAFAFA"
+
+[server]
+maxUploadSize = 500
+# Seu aplicativo está sendo acessado via IP (10.27.50.50), garantimos que o Streamlit permita o acesso
+enableCORS = true
+enableXsrfProtection = false
