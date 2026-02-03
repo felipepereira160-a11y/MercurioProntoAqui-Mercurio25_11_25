@@ -3,6 +3,7 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 import numpy as np
+from modules.processar_relatorio import extrair_odometros
 
 @st.cache_data
 def geocode_addresses(addresses):
@@ -59,6 +60,14 @@ def analisar_cps(df_cps):
     except Exception as e:
         st.error(f"Falha ao tentar dividir a coluna 'Evento / Ignição'. Verifique o formato dos dados. Erro: {e}")
         return
+
+    # 3. Extrair odômetros direto do texto (quando existir)
+    try:
+        odometro_cols = df_cps['Evento / Ignição'].apply(lambda txt: pd.Series(extrair_odometros(txt), index=['odometro', 'odometro_can']))
+        df_cps = pd.concat([df_cps, odometro_cols], axis=1)
+    except Exception:
+        df_cps['odometro'] = None
+        df_cps['odometro_can'] = None
 
     st.dataframe(df_cps)
 
@@ -163,7 +172,7 @@ def analisar_cps(df_cps):
 
             if not df_filtrado.empty:
                 # 'Placa / Identificação' e 'Data/Hora Evento' foram fornecidas pelo usuário
-                display_cols = [col for col in ['Placa / Identificação', 'Data/Hora Evento', 'Evento', 'Ignição', 'Localização'] if col in df_filtrado.columns]
+                display_cols = [col for col in ['Placa / Identificação', 'Data/Hora Evento', 'Evento', 'Ignição', 'Localização', 'odometro', 'odometro_can'] if col in df_filtrado.columns]
                 
                 st.map(df_filtrado, latitude='lat', longitude='lon', color='color')
                 st.dataframe(df_filtrado[display_cols])

@@ -189,6 +189,9 @@ def _analisar_proximidade_agendamentos(df, data_col, rep_col, city_col, id_col, 
                 custo_pedagio = os_item.get(pedagio_col, 0)
                 custo_total = custo_desloc + custo_pedagio
 
+                if custo_total <= 0:
+                    continue
+
                 pares_encontrados.append({
                     'Grupo': group_id,
                     'Representante': os_item[rep_col],
@@ -207,6 +210,24 @@ def _analisar_proximidade_agendamentos(df, data_col, rep_col, city_col, id_col, 
 
     return pd.DataFrame(pares_encontrados)
 
+def _filtrar_ordens_com_custo(df, valor_desloc_col, pedagio_col):
+    if df is None or df.empty:
+        return df
+    if not valor_desloc_col and not pedagio_col:
+        return df
+    df_filtrado = df.copy()
+    if valor_desloc_col and valor_desloc_col in df_filtrado.columns:
+        df_filtrado[valor_desloc_col] = pd.to_numeric(df_filtrado[valor_desloc_col], errors='coerce').fillna(0)
+    if pedagio_col and pedagio_col in df_filtrado.columns:
+        df_filtrado[pedagio_col] = pd.to_numeric(df_filtrado[pedagio_col], errors='coerce').fillna(0)
+    df_filtrado["__custo_total_tmp__"] = 0.0
+    if valor_desloc_col and valor_desloc_col in df_filtrado.columns:
+        df_filtrado["__custo_total_tmp__"] += df_filtrado[valor_desloc_col]
+    if pedagio_col and pedagio_col in df_filtrado.columns:
+        df_filtrado["__custo_total_tmp__"] += df_filtrado[pedagio_col]
+    df_filtrado = df_filtrado[df_filtrado["__custo_total_tmp__"] > 0].drop(columns=["__custo_total_tmp__"])
+    return df_filtrado
+
 # --- FUNÇÃO PRINCIPAL DO OTIMIZADOR ---
 def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
     
@@ -223,6 +244,7 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
         os_data_col = next((c for c in df_dados.columns if 'data agendamento' in c.lower() or 'data da os' in c.lower() or 'data_agenda' in c.lower()), None)
         os_periodo_col = next((c for c in df_dados.columns if 'período agendamento' in c.lower()), None)
         os_tel_cliente_col = next((c for c in df_dados.columns if 'telefone' in c.lower() and ('cliente' in c.lower() or 'contato' in c.lower())), None)
+        os_agendado_por_col = next((c for c in df_dados.columns if 'agendado por' in c.lower() or 'agendado_por' in c.lower() or ('agendado' in c.lower() and 'por' in c.lower())), None)
 
         if os_id_col:
             df_dados[os_id_col] = df_dados[os_id_col].astype(str).str.replace(r'\.10000$', '', regex=True).str.strip()
@@ -334,6 +356,12 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
             st.info(f"Nenhuma ordem encontrada após a exclusão dos clientes '{', '.join(clientes_a_excluir)}'.")
             return
 
+        # Remove ordens com custo agendado zerado (se houver colunas de custo)
+        df_otim = _filtrar_ordens_com_custo(df_otim, valor_deslocamento_dashboard_col, pedagio_dashboard_col)
+        if df_otim.empty:
+            st.info("Nenhuma ordem com valor > 0 encontrada após o filtro de custos.")
+            return
+
         col_f3, col_f4 = st.columns(2)
         uf_selecionado = None
         df_filtrado_uf = df_otim.copy() 
@@ -377,10 +405,32 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
             st.info("Nenhuma ordem encontrada para a seleção feita. Selecione um UF, Cidade ou pesquise uma O.S.")
             return
 
+        # Remove ordens com custo zerado (quando possível identificar)
+        if valor_deslocamento_dashboard_col or pedagio_dashboard_col:
+            df_filtrado_valor = ordens_para_analise.copy()
+            if valor_deslocamento_dashboard_col and valor_deslocamento_dashboard_col in df_filtrado_valor.columns:
+                df_filtrado_valor[valor_deslocamento_dashboard_col] = pd.to_numeric(
+                    df_filtrado_valor[valor_deslocamento_dashboard_col], errors='coerce'
+                ).fillna(0)
+            if pedagio_dashboard_col and pedagio_dashboard_col in df_filtrado_valor.columns:
+                df_filtrado_valor[pedagio_dashboard_col] = pd.to_numeric(
+                    df_filtrado_valor[pedagio_dashboard_col], errors='coerce'
+                ).fillna(0)
+            df_filtrado_valor["__custo_total_tmp__"] = 0.0
+            if valor_deslocamento_dashboard_col and valor_deslocamento_dashboard_col in df_filtrado_valor.columns:
+                df_filtrado_valor["__custo_total_tmp__"] += df_filtrado_valor[valor_deslocamento_dashboard_col]
+            if pedagio_dashboard_col and pedagio_dashboard_col in df_filtrado_valor.columns:
+                df_filtrado_valor["__custo_total_tmp__"] += df_filtrado_valor[pedagio_dashboard_col]
+            ordens_para_analise = df_filtrado_valor[df_filtrado_valor["__custo_total_tmp__"] > 0].drop(columns=["__custo_total_tmp__"])
+
+            if ordens_para_analise.empty:
+                st.info("Nenhuma ordem com valor > 0 encontrada após o filtro de custos.")
+                return
+
         # --- 3. EXIBIÇÃO DA TABELA DE ORDENS ---
         st.subheader(f"Análise de RTs para {titulo_analise} ({len(ordens_para_analise)} ordens)")
         
-        ordens_colunas = [os_id_col, 'DATA_FORMATADA', 'PERIODO_FINAL', os_cliente_col, os_city_col, os_rep_col, os_status_col]
+        ordens_colunas = [os_id_col, 'DATA_FORMATADA', 'PERIODO_FINAL', os_cliente_col, os_city_col, os_rep_col, os_status_col, os_agendado_por_col]
         ordens_colunas_existentes = [col for col in ordens_colunas if col in ordens_para_analise.columns]
         
         df_display_ordens = ordens_para_analise[ordens_colunas_existentes].rename(columns={
@@ -390,7 +440,8 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
             os_cliente_col: 'Cliente',
             os_city_col: 'Cidade',
             os_rep_col: 'Representante Técnico',
-            os_status_col: 'Status'
+            os_status_col: 'Status',
+            os_agendado_por_col: 'Agendado Por'
         })
         altura_df = min(max(300, len(df_display_ordens) * 35 + 38), 600)
         st.dataframe(df_display_ordens, use_container_width=True, height=altura_df)
@@ -467,7 +518,12 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
                     expander_title += f" ({periodo})" 
                 expander_title += f" | Data: {data_agendamento} | Cliente: {ordem[os_cliente_col]}"
                 
+                agendado_por_val = "N/A"
+                if os_agendado_por_col and os_agendado_por_col in ordem and pd.notna(ordem[os_agendado_por_col]):
+                    agendado_por_val = ordem[os_agendado_por_col]
+
                 with st.expander(expander_title):
+                    st.caption(f"Agendado Por: {agendado_por_val}")
                     col1, col2 = st.columns(2) # Coluna para RT Agendado e Sugerido
                     dist_atual, custo_atual, economia_dist, economia_custo = float('inf'), 0.0, 0.0, 0.0
                     dist_atual, custo_atual, economia_dist, economia_custo, telefone_rt_agendado, cidade_rt_agendado, uf_rt_agendado = float('inf'), 0.0, 0.0, 0.0, "N/A", "N/A", "N/A"
@@ -541,6 +597,7 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
                     'Telefone Cliente': ordem.get(os_tel_cliente_col, "N/A"),
                     'data agendamento': data_agendamento,
                     'periodo': periodo,
+                    'Agendado Por': ordem.get(os_agendado_por_col, "N/A"),
                     'RT Agendado': rt_atual, 
                     'Cidade RT Agendado': cidade_rt_agendado,
                     'UF RT Agendado': uf_rt_agendado,
@@ -667,6 +724,7 @@ def otimizador(df_dados, df_map, df_ultimaposicao=None, df_ativos=None):
                         'Telefone Cliente': ordem.get(os_tel_cliente_col, "N/A"),
                         'data agendamento': data_agendamento_completo,
                         'periodo': periodo_completo,
+                        'Agendado Por': ordem.get(os_agendado_por_col, "N/A"),
                         'RT Agendado': rt_atual,
                         'Cidade RT Agendado': cidade_rt_agendado_val,
                         'UF RT Agendado': uf_rt_agendado_val,

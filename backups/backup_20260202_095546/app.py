@@ -569,21 +569,6 @@ if st.session_state["authentication_status"]:
                                         )
                                         st.dataframe(df_topicos, use_container_width=True)
 
-                                    por_usuario = metrics.get("por_usuario", {})
-                                    if por_usuario:
-                                        df_usuarios = pd.DataFrame(
-                                            [{"Usuário": k, "Perguntas": v} for k, v in sorted(por_usuario.items(), key=lambda x: x[1], reverse=True)]
-                                        )
-                                        st.subheader("Perguntas por usuário")
-                                        st.dataframe(df_usuarios, use_container_width=True)
-
-                                    perguntas_por_usuario = metrics.get("perguntas_por_usuario", {})
-                                    if perguntas_por_usuario:
-                                        st.subheader("Últimas perguntas por usuário")
-                                        for usuario, lista in perguntas_por_usuario.items():
-                                            st.markdown(f"**{usuario}**")
-                                            st.text("\n".join(lista[-10:]))
-
                                     perguntas = metrics.get("perguntas", {})
                                     if perguntas:
                                         top_perguntas = sorted(perguntas.items(), key=lambda x: x[1], reverse=True)[:10]

@@ -12,6 +12,19 @@ from modules.resumo_relatorios import (
     gerar_resumo_agendamentos,
 )
 
+def _normalizar_dataframe(df):
+    if df is None:
+        return None
+    df = df.copy()
+    df.columns = [str(c).replace("\ufeff", "").strip() for c in df.columns]
+    cols_drop = [c for c in df.columns if not c or str(c).startswith("Unnamed")]
+    if cols_drop:
+        df.drop(columns=cols_drop, inplace=True, errors="ignore")
+    obj_cols = df.select_dtypes(include=["object"]).columns
+    for col in obj_cols:
+        df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+    return df
+
 @st.cache_data
 def _carregar_dataframe_from_bytes(file_content, file_name, separador_padrao=',', forcar_cabecalho_relatorio=False):
     """
@@ -22,23 +35,23 @@ def _carregar_dataframe_from_bytes(file_content, file_name, separador_padrao=','
 
     if nome_arquivo_lower.endswith('.xlsx'):
         if forcar_cabecalho_relatorio or any(keyword in nome_arquivo_lower for keyword in ["estoque", "relatorio", "posicao"]):
-            return pd.read_excel(arquivo_memoria, engine='openpyxl', header=6)
+            return _normalizar_dataframe(pd.read_excel(arquivo_memoria, engine='openpyxl', header=6))
         else:
-            return pd.read_excel(arquivo_memoria, engine='openpyxl')
+            return _normalizar_dataframe(pd.read_excel(arquivo_memoria, engine='openpyxl'))
     elif nome_arquivo_lower.endswith('.xls'):
-        return pd.read_excel(arquivo_memoria, engine='xlrd')
+        return _normalizar_dataframe(pd.read_excel(arquivo_memoria, engine='xlrd'))
     elif nome_arquivo_lower.endswith('.csv'):
         try:
             arquivo_memoria.seek(0)
             df = pd.read_csv(arquivo_memoria, encoding='latin-1', sep=separador_padrao, on_bad_lines='skip')
             if len(df.columns) > 1:
-                return df
+                return _normalizar_dataframe(df)
         except Exception:
             pass # Tenta o próximo separador
         
         arquivo_memoria.seek(0)
         outro_sep = ',' if separador_padrao == ';' else ';'
-        return pd.read_csv(arquivo_memoria, encoding='latin-1', sep=outro_sep, on_bad_lines='skip')
+        return _normalizar_dataframe(pd.read_csv(arquivo_memoria, encoding='latin-1', sep=outro_sep, on_bad_lines='skip'))
     
     return None
 

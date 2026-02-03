@@ -6,6 +6,8 @@ import io
 import pydeck as pdk
 import reverse_geocoder as rg
 import pycountry
+from modules.processar_relatorio import extrair_odometros
+from modules.utils import convert_df_to_csv
 
 def to_excel(df, highlight_col=None, highlight_value='Sim'):
     """Converts a dataframe to an Excel file in-memory, with optional highlighting."""
@@ -42,6 +44,121 @@ def standardize_column_names(df):
         df.rename(columns=rename_dict, inplace=True)
     return df
 
+def _normalize_key(value):
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return None
+    text = str(value).strip()
+    return text.upper() if text else None
+
+def _prepare_posicao_odometro_df(df):
+    if df is None or df.empty:
+        return pd.DataFrame()
+    cols = ['Serial', 'Placa', 'odometro', 'odometro_can']
+    existing_cols = [c for c in cols if c in df.columns]
+    df_copy = df[existing_cols].copy()
+
+    df_copy['serial_key'] = df_copy.get('Serial').apply(_normalize_key) if 'Serial' in df_copy else None
+    df_copy['placa_key'] = df_copy.get('Placa').apply(_normalize_key) if 'Placa' in df_copy else None
+    df_copy['__pos_index__'] = df_copy.index
+    return df_copy
+
+def _prepare_cps_odometro_df(df):
+    if df is None or df.empty or 'Evento / Ignição' not in df.columns:
+        return None
+    cps_copy = df.copy()
+    cps_copy['Evento / Ignição'] = cps_copy['Evento / Ignição'].astype(str)
+
+    odometer_values = cps_copy['Evento / Ignição'].apply(
+        lambda txt: pd.Series(extrair_odometros(txt), index=['odometro', 'odometro_can'])
+    )
+    cps_copy = pd.concat([cps_copy, odometer_values], axis=1)
+
+    splitted = cps_copy['Evento / Ignição'].str.split('/', n=1, expand=True)
+    cps_copy['Evento'] = splitted[0].str.strip()
+    if splitted.shape[1] > 1:
+        cps_copy['Ignição'] = splitted[1].str.strip()
+    else:
+        cps_copy['Ignição'] = None
+
+    serial_col = next((c for c in cps_copy.columns if 'serial' in c.lower()), None)
+    placa_col = next((c for c in cps_copy.columns if 'placa' in c.lower()), None)
+
+    cps_copy['Serial'] = cps_copy[serial_col] if serial_col else None
+    cps_copy['Placa'] = cps_copy[placa_col] if placa_col else None
+
+    cps_copy['serial_key'] = cps_copy['Serial'].apply(_normalize_key)
+    cps_copy['placa_key'] = cps_copy['Placa'].apply(_normalize_key)
+    cps_copy['__cps_index__'] = cps_copy.index
+
+    return cps_copy
+
+def _merge_on_key(df_pos, df_cps, key, match_label):
+    if key not in df_pos.columns or key not in df_cps.columns:
+        return pd.DataFrame()
+    df_pos_key = df_pos[df_pos[key].notna()].copy()
+    df_cps_key = df_cps[df_cps[key].notna()].copy()
+    if df_pos_key.empty or df_cps_key.empty:
+        return pd.DataFrame()
+    merged = pd.merge(
+        df_pos_key,
+        df_cps_key,
+        on=key,
+        suffixes=('_pos', '_cps'),
+        how='inner',
+        sort=False,
+    )
+    if merged.empty:
+        return merged
+    merged['Match via'] = match_label
+    return merged
+
+def cruzar_odometros_posicao_cps(df_pos, df_cps):
+    df_cps_prepared = _prepare_cps_odometro_df(df_cps)
+    if df_cps_prepared is None or df_pos is None or df_pos.empty:
+        return None
+
+    df_pos_prepared = _prepare_posicao_odometro_df(df_pos)
+    if df_pos_prepared.empty:
+        return pd.DataFrame()
+
+    serial_merge = _merge_on_key(df_pos_prepared, df_cps_prepared, 'serial_key', 'Serial')
+
+    matched_pos = set(serial_merge['__pos_index__']) if not serial_merge.empty else set()
+    matched_cps = set(serial_merge['__cps_index__']) if not serial_merge.empty else set()
+
+    pos_remaining = df_pos_prepared[~df_pos_prepared['__pos_index__'].isin(matched_pos)]
+    cps_remaining = df_cps_prepared[~df_cps_prepared['__cps_index__'].isin(matched_cps)]
+
+    placa_merge = _merge_on_key(pos_remaining, cps_remaining, 'placa_key', 'Placa')
+
+    final = pd.concat([serial_merge, placa_merge], ignore_index=True, sort=False)
+    if final.empty:
+        return final
+
+    rename_map = {
+        'Serial_pos': 'Serial (Posição)',
+        'Placa_pos': 'Placa (Posição)',
+        'Serial_cps': 'Serial (CPS)',
+        'Placa_cps': 'Placa (CPS)',
+        'odometro_pos': 'Odômetro Posição',
+        'odometro_can_pos': 'Odômetro CAN Posição',
+        'odometro_cps': 'Odômetro CPS',
+        'odometro_can_cps': 'Odômetro CAN CPS',
+        'Evento / Ignição': 'Evento / Ignição (CPS)',
+        'Ignição': 'Ignição (CPS)'
+    }
+    final = final.rename(columns=rename_map)
+
+    cols_order = [
+        'Serial (Posição)', 'Placa (Posição)', 'Odômetro Posição', 'Odômetro CAN Posição',
+        'Serial (CPS)', 'Placa (CPS)', 'Odômetro CPS', 'Odômetro CAN CPS',
+        'Evento / Ignição (CPS)', 'Ignição (CPS)', 'Match via'
+    ]
+    cols_existentes = [col for col in cols_order if col in final.columns]
+    final = final[cols_existentes + [col for col in final.columns if col not in cols_existentes]]
+    final.drop(columns=[c for c in ['serial_key', 'placa_key', '__pos_index__', '__cps_index__'] if c in final.columns], inplace=True, errors='ignore')
+    final.fillna('N/A', inplace=True)
+    return final
 def map_to_canonical_model_names(df):
     """
     Agrupa nomes de modelos de HW semelhantes e os padroniza para a forma mais comum,
@@ -532,6 +649,30 @@ def analisar_ultima_posicao(df_processado):
     colunas_existentes = [col for col in colunas_para_mostrar if col in df_filtrado.columns]
     st.dataframe(df_filtrado[colunas_existentes], use_container_width=True)
 
+    cps_cross_df = None
+    cps_loaded = "df_cps" in st.session_state and st.session_state.df_cps is not None
+    if cps_loaded:
+        cps_cross_df = cruzar_odometros_posicao_cps(df_filtrado, st.session_state.get("df_cps"))
+
+    st.markdown("---")
+    st.subheader("Cruzamento de Odômetros (Posição x CPS)")
+    if not cps_loaded:
+        st.info("Carregue um Relatório CPS para habilitar o cruzamento de odômetros.")
+    elif cps_cross_df is None:
+        st.warning("O relatório CPS precisa conter a coluna 'Evento / Ignição' para extrair os odômetros.")
+    elif cps_cross_df.empty:
+        st.info("Nenhum equipamento com odômetro cruzado entre Posição e CPS foi encontrado.")
+    else:
+        st.metric("Combinações encontradas", len(cps_cross_df))
+        st.dataframe(cps_cross_df, use_container_width=True)
+        st.download_button(
+            label="📥 Exportar cruzamento",
+            data=convert_df_to_csv(cps_cross_df),
+            file_name="cruzamento_odometros_posicao_cps.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
     st.markdown("---")
     st.subheader("Mapa de Posições (Equipamentos posicionando há menos de 15 dias)")
     df_mapa = df_filtrado[df_filtrado['dias_sem_posicao'] < 15].copy()
@@ -621,6 +762,11 @@ def analisar_ultima_posicao(df_processado):
         'tipo_localidade': 'Tipo Localidade',
         'mesma_regiao': 'Na Região da Base'
     }
+    # inclui odômetros nas exportações
+    if 'odometro' in df_filtrado.columns:
+        posicao_cols['odometro'] = 'Odômetro (Posição)'
+    if 'odometro_can' in df_filtrado.columns:
+        posicao_cols['odometro_can'] = 'Odômetro CAN (Posição)'
     
     # Colunas dos Ativos para exportar
     ativos_cols = {
