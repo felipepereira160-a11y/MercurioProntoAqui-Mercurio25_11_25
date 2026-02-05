@@ -1,0 +1,126 @@
+cookie:
+  expiry_days: 30
+  key: random_signature_key
+  name: mercurio_cookie
+credentials:
+  usernames:
+    admin:
+      email: admin@example.com
+      name: Administrador
+      password: $2b$12$3VYQ90YJ8eZ1J/D9XOmZq.JMEZAt7v5eksloIRxGb1cp2uUOClz9m
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\U0001F5D3\uFE0F Agendadas"
+      - "\U0001F4CB Backlog"
+      - "\U0001F4CD Posi\xE7\xE3o"
+      - "\U0001F6F0\uFE0F CPS"
+      - "\U0001F69A Ativos"
+      - "\u2699\uFE0F Otimizador"
+      - "\U0001F4B0 Custos"
+      - "\u21A9\uFE0F Devolu\xE7\xE3o"
+      - "\U0001F5FA\uFE0F Mapeamento"
+      - "\U0001F916 Co-piloto"
+    brunavalerio:
+      email: bruna.valerio@ceabs.com.br
+      first_name: Bruna
+      last_name: "Val\xE9rio"
+      logged_in: false
+      password: $2b$12$YmbxPt3Wxy.NNuO5twRvWutslIdoqMQl9QyJ4htj1MUrJlIXVu.lm
+      password_hint: C3abs@2027
+      roles: null
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\u2699\uFE0F Otimizador"
+    danielbento:
+      email: daniel.bento@ceabs.com.br
+      logged_in: false
+      name: Daniel Bento
+      password: $2b$12$ZRSm1j4j8j4niP/lngrxhutfJw9GGmuAHNoFeCyh849rjRtUvAxIu
+      password_hint: Ceabs@3019
+      roles: null
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\U0001F4CB Backlog"
+      - "\U0001F4CD Posi\xE7\xE3o"
+      - "\U0001F6F0\uFE0F CPS"
+      - "\U0001F69A Ativos"
+      - "\u2699\uFE0F Otimizador"
+      - "\U0001F4B0 Custos"
+      - "\u21A9\uFE0F Devolu\xE7\xE3o"
+      - "\U0001F5FA\uFE0F Mapeamento"
+      - "\U0001F5D3\uFE0F Agendadas"
+    evellinmacedo:
+      email: evellin.macedo@ceabs.com.br
+      first_name: Evellin
+      last_name: Macedo
+      logged_in: false
+      password: $2b$12$M7M1xDdrC06q/fsPJI.fe.sqtcbOgP.C./eJtxoUkzsIm7ECrGkti
+      roles: null
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\u2699\uFE0F Otimizador"
+    felipe:
+      email: felipe.silva@example.com
+      name: Felipe Silva
+      password: $2b$12$wmI392kslVNAkA7C9Tevw.zX8XoB1rr9U1EJf05eZoQYKXYlPsb1i
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\U0001F5D3\uFE0F Agendadas"
+      - "\U0001F4CB Backlog"
+      - "\U0001F4CD Posi\xE7\xE3o"
+      - "\U0001F6F0\uFE0F CPS"
+      - "\U0001F69A Ativos"
+      - "\u2699\uFE0F Otimizador"
+      - "\U0001F4B0 Custos"
+      - "\u21A9\uFE0F Devolu\xE7\xE3o"
+      - "\U0001F5FA\uFE0F Mapeamento"
+      - "\U0001F916 Co-piloto"
+    guilherme_amaral:
+      email: guilherme.amaral@ceabs.com.br
+      first_name: Guilherme
+      last_name: Amaral
+      logged_in: false
+      password: $2b$12$DBau3OSouxDZWz7XW8J8teGCVAYjoQr7iBuWmouRMPkY.sJhC/1ii
+      password_hint: ceabs
+      roles: null
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\u2699\uFE0F Otimizador"
+      - "\U0001F4B0 Custos"
+      - "\U0001F5FA\uFE0F Mapeamento"
+      - "\U0001F4CD Posi\xE7\xE3o"
+      - "\U0001F4CB Backlog"
+      - "\U0001F69A Ativos"
+      - "\U0001F6F0\uFE0F CPS"
+      - "\u21A9\uFE0F Devolu\xE7\xE3o"
+    saratavares:
+      email: sarasouza682@gmail.com
+      first_name: sara
+      last_name: tavares
+      logged_in: false
+      password: $2b$12$.eQ5dVME2smKTVzmVOagiuD2DJhDPTGYZUtkiLZfWay.nAiOHq9Du
+      password_hint: Eu
+      roles: null
+      status: approved
+      tabs:
+      - "\U0001F4CD Posi\xE7\xE3o"
+      - "\u2699\uFE0F Otimizador"
+      - "\U0001F6F0\uFE0F CPS"
+    tairinisantiago:
+      email: tairini.santiago@gmail.com
+      first_name: TAIRINI
+      last_name: SANTIAGO
+      logged_in: false
+      password: $2b$12$llaW0/UY.aNcuSMt/C/IRukPKGBx6SmqJKko7omjbHcTMSW2wFKOK
+      password_hint: niver de casamento
+      roles: null
+      status: approved
+      tabs:
+      - "\U0001F4CA Dashboard"
+      - "\u2699\uFE0F Otimizador"

@@ -1,0 +1,32 @@
+{
+  "name": "mercurio-upload-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Simple Fastify backend for Supabase storage uploads.",
+  "type": "module",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.3.0",
+    "@fastify/multipart": "^9.2.0",
+    "@supabase/supabase-js": "^2.50.0",
+    "dotenv": "^16.4.7",
+    "fastify": "^4.19.0",
+    "pino-pretty": "^10.1.1",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.2",
+    "eslint": "^9.4.0",
+    "eslint-config-standard-with-typescript": "^34.1.0",
+    "eslint-plugin-import": "^2.31.1",
+    "eslint-plugin-n": "^17.9.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}

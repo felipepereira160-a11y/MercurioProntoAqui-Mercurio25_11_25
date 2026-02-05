@@ -1,0 +1,17 @@
+streamlit
+google-generativeai
+pandas
+openpyxl
+matplotlib
+openrouteservice
+haversine
+pywebview
+pywebview==4.0.1
+plotly
+geopy
+folium
+streamlit-authenticator
+pyyaml
+bcrypt
+reverse-geocoder
+pycountry
